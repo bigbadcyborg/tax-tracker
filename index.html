@@ -1,0 +1,2435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Tax Deduction Tracker</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%231d6b45'/%3E%3Ctext x='8' y='12.2' text-anchor='middle' font-size='11' font-family='Georgia' fill='%23f6f1e7'%3E$%3C/text%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f3efe6;
+      --card: #fffdf8;
+      --ink: #1e1a16;
+      --muted: #5e584f;
+      --line: #e3dacb;
+      --line-strong: #d4cbbd;
+      --green: #1d6b45;
+      --rust: #8c3a2f;
+      --amber: #f4e4c8;
+      --shadow: 0 1px 0 rgba(30, 26, 22, 0.04), 0 10px 28px rgba(30, 26, 22, 0.05);
+    }
+
+    * { box-sizing: border-box; }
+
+    [hidden] { display: none !important; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(900px 420px at 0% -10%, rgba(29, 107, 69, 0.08), transparent 55%),
+        var(--paper);
+      color: var(--ink);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
+    body::before {
+      content: "";
+      display: block;
+      height: 6px;
+      background: var(--green);
+    }
+
+    .skip {
+      position: absolute;
+      left: 0.75rem;
+      top: 0.75rem;
+      transform: translateY(-150%);
+      background: white;
+      color: var(--ink);
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      z-index: 20;
+    }
+
+    .skip:focus { transform: none; }
+
+    .banner {
+      background: var(--amber);
+      color: var(--ink);
+      padding: 0.75rem 1.25rem;
+      text-align: center;
+    }
+
+    .wrap {
+      width: min(1120px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 1.4rem 0 3rem;
+    }
+
+    .site-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 1rem;
+      margin-bottom: 1.15rem;
+      padding-bottom: 0.9rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      margin: 0 0 0.2rem;
+      color: var(--green);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, .hero-number {
+      font-family: Palatino, "Palatino Linotype", "Iowan Old Style", Georgia, serif;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 3vw, 2.35rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+    }
+
+    h2 { margin: 0 0 0.85rem; font-size: 1.45rem; font-weight: 600; }
+
+    h3 {
+      margin: 1rem 0 0.35rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .lede, .header-note, .muted { color: var(--muted); }
+
+    .lede { margin: 0.35rem 0 0; max-width: 38rem; }
+
+    .header-note { margin: 0; text-align: right; font-size: 0.92rem; }
+
+    .status, .alert {
+      margin: 0 0 0.9rem;
+      padding: 0.55rem 0.75rem;
+      border-radius: 8px;
+    }
+
+    .status:empty, .alert:empty, .field-error:empty { display: none; }
+
+    .status { background: #e7f3ec; }
+
+    .alert, .field-error { color: var(--rust); }
+
+    .alert {
+      background: #f8ebe7;
+      padding: 0.55rem 0.75rem;
+    }
+
+    .field-error { display: block; font-size: 0.82rem; margin-top: 0.2rem; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(17.5rem, 23rem) minmax(0, 1fr);
+      grid-template-areas:
+        "entry summary"
+        "entry ledger";
+      gap: 1rem 1.15rem;
+      align-items: start;
+    }
+
+    .summary, .entry, .ledger { min-width: 0; }
+    .summary { grid-area: summary; }
+    .entry { grid-area: entry; }
+    .ledger { grid-area: ledger; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 1rem 1.05rem 1.1rem;
+    }
+
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 0.75rem;
+    }
+
+    .summary h2 {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .hero-number {
+      margin: 0.15rem 0 0.2rem;
+      color: var(--green);
+      font-size: clamp(2.5rem, 6vw, 3.5rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 0.95;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hero-number.negative { color: var(--rust); }
+
+    .hero-meta { margin: 0; color: var(--muted); }
+
+    .year-field { font-size: 0.92rem; min-width: 9.5rem; }
+    .year-range { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+    .image-preview, .thumbs { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.35rem; }
+    .image-preview figure { margin: 0; display: grid; gap: 0.15rem; justify-items: start; }
+    .image-preview img, .thumb img {
+      width: 76px;
+      height: 76px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--line-strong);
+      display: block;
+      background: white;
+    }
+    .thumb { padding: 0; min-height: 0; border: 0; background: transparent; line-height: 0; }
+    .viewer {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+      background: rgba(30, 26, 22, 0.72);
+    }
+    .viewer-card { display: grid; gap: 0.75rem; justify-items: center; max-width: 100%; }
+    .viewer img { max-width: min(920px, 100%); max-height: 78vh; background: white; border-radius: 8px; }
+
+    label, .field { display: grid; gap: 0.28rem; font-size: 0.92rem; }
+
+    .optional { color: var(--muted); font-weight: 400; }
+
+    input, select, button, .file-button {
+      font: inherit;
+      color: inherit;
+    }
+
+    input, select {
+      width: 100%;
+      min-height: 44px;
+      padding: 0.5rem 0.65rem;
+      background: white;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+    }
+
+    input[aria-invalid="true"], select[aria-invalid="true"] { border-color: var(--rust); }
+
+    input::placeholder { color: #6f675e; }
+    input:focus-visible, select:focus-visible, button:focus-visible, .skip:focus {
+      outline: 2px solid var(--green);
+      outline-offset: 2px;
+    }
+
+    button, .file-button {
+      min-height: 44px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      padding: 0.45rem 0.85rem;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .primary { background: var(--ink); color: #f6f1e7; }
+    .primary:hover { background: #34302a; }
+
+    .secondary, .file-button, .preset-apply {
+      background: white;
+      border-color: var(--line-strong);
+    }
+
+    .secondary:hover, .file-button:hover, .preset-apply:hover { background: #faf6ef; }
+
+    .danger, .negative, td.negative { color: var(--rust); }
+
+    .text-button {
+      min-height: 36px;
+      padding: 0.2rem 0.45rem;
+      text-decoration: underline;
+      text-underline-offset: 0.15em;
+    }
+
+    .pair, .form-grid, .preset-list, .defaults-list { display: grid; gap: 0.75rem; }
+
+    .pair { grid-template-columns: 1fr 1fr; }
+
+    .form-actions { display: flex; gap: 0.5rem; margin-top: 0.2rem; }
+    .form-actions .primary { flex: 1; }
+
+    .presets { margin-top: 1.15rem; padding-top: 0.2rem; }
+    .presets h2, details h2 { font-size: 1.15rem; }
+
+    .preset-list { gap: 0.45rem; }
+
+    .preset { display: flex; gap: 0.35rem; align-items: stretch; }
+    .preset-apply { flex: 1; text-align: left; }
+
+    .save-preset {
+      display: grid;
+      gap: 0.55rem;
+      margin-top: 0.7rem;
+      padding: 0.75rem;
+      border: 1px dashed var(--line-strong);
+      border-radius: 8px;
+    }
+
+    .inline-actions { display: flex; gap: 0.45rem; }
+
+    details {
+      margin-top: 1rem;
+      border-top: 1px solid var(--line);
+      padding-top: 0.7rem;
+    }
+
+    summary {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      font-family: Palatino, "Palatino Linotype", Georgia, serif;
+      font-size: 1.15rem;
+    }
+
+    .default-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 5.5rem auto;
+      gap: 0.45rem;
+      align-items: center;
+    }
+
+    .default-row span { overflow-wrap: anywhere; }
+
+    .add-category { display: grid; gap: 0.55rem; margin-top: 0.8rem; }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(6.5rem, 9.5rem) minmax(0, 1fr) auto;
+      gap: 0.55rem;
+      align-items: center;
+      margin: 0.4rem 0;
+    }
+
+    .bar-name { overflow-wrap: anywhere; }
+
+    .bar-track {
+      height: 0.55rem;
+      background: #efe8dc;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill { display: block; height: 100%; background: var(--green); border-radius: inherit; }
+    .bar-fill.negative { background: var(--rust); }
+    .bar-value, .num, .hero-number, .hero-meta { font-variant-numeric: tabular-nums; }
+
+    .ledger-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.75rem;
+    }
+
+    .ledger-head h2 { margin: 0; }
+    .ledger-head p { margin: 0; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr 1fr;
+      gap: 0.7rem;
+      margin: 0.9rem 0 0.4rem;
+    }
+
+    .search-field { grid-column: 1 / -1; }
+
+    .mobile-sort { display: none; }
+
+    .table-wrap { overflow-x: auto; max-width: 100%; }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    caption { text-align: left; font-weight: 600; margin-bottom: 0.35rem; }
+
+    th, td {
+      text-align: left;
+      padding: 0.55rem 0.45rem;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    th { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+
+    th button {
+      min-height: 32px;
+      padding: 0;
+      font-weight: 600;
+      color: inherit;
+    }
+
+    td.num, th.num { text-align: right; }
+    td.deductible { color: var(--green); font-weight: 600; }
+    #showing:empty { display: none; }
+    td.desc { overflow-wrap: anywhere; }
+    td.num, td.actions { white-space: nowrap; }
+    td.actions .text-button { min-height: 32px; padding: 0.1rem 0.35rem; }
+
+    .note { display: block; color: var(--muted); font-size: 0.82rem; margin-top: 0.15rem; }
+
+    tbody tr:hover { background: #faf6ef; }
+    td.empty { color: var(--muted); padding: 1.1rem 0.45rem; }
+    td.actions { white-space: nowrap; text-align: right; }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.85rem; }
+
+    .site-footer { margin-top: 1.2rem; }
+    .disclaimer { margin: 0; max-width: 46rem; color: var(--muted); font-size: 0.88rem; }
+
+    .dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+      background: rgba(30, 26, 22, 0.46);
+    }
+
+    .dialog-card {
+      width: min(26rem, 100%);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 18px 50px rgba(30, 26, 22, 0.2);
+      padding: 1.1rem;
+    }
+
+    .dialog-card p { margin: 0 0 1rem; }
+
+    .print-only { display: none; }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (min-width: 961px) {
+      .entry { position: sticky; top: 1rem; align-self: start; }
+    }
+
+    @media (max-width: 960px) {
+      .site-header { flex-direction: column; align-items: start; }
+      .header-note { text-align: left; }
+      .layout {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "summary"
+          "entry"
+          "ledger";
+      }
+      .filters { grid-template-columns: 1fr 1fr; }
+      .pair { grid-template-columns: 1fr; }
+      .mobile-sort { display: grid; margin-top: 0.7rem; }
+      thead { display: none; }
+      table, tbody, tr, td { min-width: 0; }
+      tr { display: block; padding: 0.35rem 0 0.7rem; }
+      td {
+        display: grid;
+        grid-template-columns: 6.75rem minmax(0, 1fr);
+        gap: 0.35rem;
+        align-items: baseline;
+        border: 0;
+        padding: 0.18rem 0;
+        text-align: left;
+      }
+      td::before {
+        content: attr(data-label);
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+      td.empty { display: block; }
+      td.empty::before, td.actions::before { content: none; }
+      td.actions { display: flex; gap: 0.35rem; padding-top: 0.35rem; }
+    }
+
+    @media print {
+      body { background: white; }
+      body::before, .no-print, .status, .alert, .banner, .bars, .year-field { display: none !important; }
+      .print-only { display: revert; }
+      .wrap { width: auto; padding: 0; }
+      .card { box-shadow: none; border: none; padding: 0; background: white; }
+      .layout { display: block; }
+      .hero-number { font-size: 2rem; }
+      .thumbs img { width: 140px; height: auto; object-fit: contain; }
+      .mobile-sort { display: none !important; }
+      thead { display: table-header-group !important; }
+      tr { display: table-row !important; }
+      td {
+        display: table-cell !important;
+        text-align: left;
+        border-bottom: 1px solid var(--line);
+      }
+      td.num { text-align: right !important; }
+      td::before { content: none !important; }
+      tbody tr:hover { background: transparent; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#expense-form">Skip to add expense</a>
+  <div id="storage-banner" class="banner" hidden role="status"></div>
+  <div class="wrap">
+    <header class="site-header">
+      <div>
+        <p class="eyebrow">Private fiscal ledger</p>
+        <h1>Tax Deduction Tracker</h1>
+        <p class="lede no-print">Fiscal year runs October 1 through September 30. A personal Form 1040 is usually January through December. Receipt images stay in this browser. Download a backup before you clear browsing data.</p>
+        <p id="print-stamp" class="print-only"></p>
+      </div>
+      <p id="backup-status" class="header-note no-print"></p>
+    </header>
+
+    <p id="status" class="status no-print" role="status"></p>
+    <p id="alert" class="alert no-print" role="alert"></p>
+
+    <main class="layout">
+      <section class="summary card" aria-labelledby="summary-heading">
+        <div class="hero-top">
+          <h2 id="summary-heading">Deductible</h2>
+          <label class="year-field">Fiscal year
+            <select id="year"></select>
+          </label>
+        </div>
+        <p id="total" class="hero-number">$0.00</p>
+        <p id="total-meta" class="hero-meta">0 expenses · $0.00 entered</p>
+        <p id="year-range" class="year-range"></p>
+        <h3>By category</h3>
+        <div id="bars" class="bars"></div>
+        <table id="print-categories" class="print-only"></table>
+      </section>
+
+      <section class="entry card no-print">
+        <form id="expense-form" novalidate autocomplete="off">
+          <h2 id="form-heading">Add expense</h2>
+          <div class="form-grid">
+            <div class="pair">
+              <label for="date">Date
+                <input id="date" name="date" type="date" aria-describedby="date-error" required>
+                <span id="date-error" class="field-error"></span>
+              </label>
+              <label for="amount">Amount
+                <input id="amount" name="amount" type="text" inputmode="decimal" spellcheck="false" aria-describedby="amount-error" required>
+                <span id="amount-error" class="field-error"></span>
+              </label>
+            </div>
+            <div class="pair">
+              <label for="category">Category
+                <select id="category" name="category" aria-describedby="category-error" required></select>
+                <span id="category-error" class="field-error"></span>
+              </label>
+              <label for="business-percent">Business %
+                <input id="business-percent" name="business-percent" type="text" inputmode="decimal" spellcheck="false" aria-describedby="percent-error" required>
+                <span id="percent-error" class="field-error"></span>
+              </label>
+            </div>
+            <label for="description"><span>Description <span class="optional">optional</span></span>
+              <input id="description" name="description" type="text" maxlength="200" aria-describedby="description-error">
+              <span id="description-error" class="field-error"></span>
+            </label>
+            <label for="receipt-note"><span>Receipt note <span class="optional">optional</span></span>
+              <input id="receipt-note" name="receipt-note" type="text" maxlength="200" aria-describedby="receipt-error">
+              <span id="receipt-error" class="field-error"></span>
+            </label>
+            <label for="receipt-images"><span>Receipt images <span class="optional">optional, up to 8</span></span>
+              <input id="receipt-images" name="receipt-images" type="file" accept="image/*" multiple aria-describedby="image-error">
+              <span id="image-error" class="field-error"></span>
+            </label>
+            <div id="image-preview" class="image-preview"></div>
+            <div class="form-actions">
+              <button id="submit-expense" class="primary" type="submit">Add expense</button>
+              <button id="cancel-edit" class="secondary" type="button" hidden>Cancel</button>
+            </div>
+          </div>
+        </form>
+
+        <div class="presets">
+          <h2>Presets</h2>
+          <div id="preset-list" class="preset-list"></div>
+          <button id="save-preset-open" class="text-button" type="button">Save current as preset</button>
+          <div id="save-preset-panel" class="save-preset" hidden>
+            <label for="preset-label">Preset name
+              <input id="preset-label" type="text" maxlength="40">
+            </label>
+            <div class="inline-actions">
+              <button id="save-preset-confirm" class="secondary" type="button">Save preset</button>
+              <button id="save-preset-cancel" class="text-button" type="button">Cancel</button>
+            </div>
+            <p id="preset-error" class="field-error"></p>
+          </div>
+        </div>
+
+        <details>
+          <summary>Category defaults</summary>
+          <div id="defaults-list" class="defaults-list"></div>
+          <p id="defaults-error" class="field-error"></p>
+          <form id="add-category-form" class="add-category" novalidate>
+            <label for="new-category">New category
+              <input id="new-category" type="text" maxlength="40">
+            </label>
+            <label for="new-category-percent">Default %
+              <input id="new-category-percent" type="text" inputmode="decimal" value="100">
+            </label>
+            <button class="secondary" type="submit">Add category</button>
+            <p id="new-category-error" class="field-error"></p>
+          </form>
+        </details>
+      </section>
+
+      <section class="ledger card" aria-labelledby="ledger-heading">
+        <div class="ledger-head">
+          <h2 id="ledger-heading">Expenses</h2>
+          <p id="showing" class="muted"></p>
+        </div>
+        <div class="filters no-print">
+          <label class="search-field" for="search">Search
+            <input id="search" type="search" placeholder="Description or receipt note">
+          </label>
+          <label for="category-filter">Category
+            <select id="category-filter"></select>
+          </label>
+          <label for="from-date">From
+            <input id="from-date" type="date">
+          </label>
+          <label for="to-date">Through
+            <input id="to-date" type="date">
+          </label>
+        </div>
+        <p id="filter-hint" class="field-error"></p>
+        <label class="mobile-sort" for="mobile-sort">Sort
+          <select id="mobile-sort">
+            <option value="date:desc">Newest date</option>
+            <option value="date:asc">Oldest date</option>
+            <option value="amount:desc">Amount, high to low</option>
+            <option value="amount:asc">Amount, low to high</option>
+            <option value="deductible:desc">Deductible, high to low</option>
+            <option value="category:asc">Category</option>
+            <option value="description:asc">Description</option>
+          </select>
+        </label>
+        <div class="table-wrap">
+          <table>
+            <caption class="visually-hidden">Expense line items</caption>
+            <thead>
+              <tr>
+                <th scope="col" data-sort-key="date" aria-sort="descending"><button type="button" data-sort="date">Date<span class="sort-mark" aria-hidden="true"></span></button></th>
+                <th scope="col" data-sort-key="description" aria-sort="none"><button type="button" data-sort="description">Description<span class="sort-mark" aria-hidden="true"></span></button></th>
+                <th scope="col" data-sort-key="category" aria-sort="none"><button type="button" data-sort="category">Category<span class="sort-mark" aria-hidden="true"></span></button></th>
+                <th class="num" scope="col" data-sort-key="amount" aria-sort="none"><button type="button" data-sort="amount">Amount<span class="sort-mark" aria-hidden="true"></span></button></th>
+                <th class="num" scope="col" data-sort-key="businessPercent" aria-sort="none"><button type="button" data-sort="businessPercent">Business %<span class="sort-mark" aria-hidden="true"></span></button></th>
+                <th class="num" scope="col" data-sort-key="deductible" aria-sort="none"><button type="button" data-sort="deductible">Deductible<span class="sort-mark" aria-hidden="true"></span></button></th>
+                <th class="no-print" scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody id="expense-rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="actions no-print" role="group" aria-label="Backup and export">
+        <button id="export-csv" class="secondary" type="button">Download CSV</button>
+        <button id="export-json" class="secondary" type="button">Download backup</button>
+        <button id="import-button" class="secondary" type="button">Import backup</button>
+        <input id="import-file" class="visually-hidden" type="file" accept="application/json,.json">
+        <button id="print-button" class="secondary" type="button">Print summary</button>
+      </div>
+      <p class="disclaimer">This is a private log of what you enter. Deductible totals are amount × business %. The app does not apply tax-code limits, and it is not tax advice. If you take the standard mileage rate for the truck, do not also deduct those same truck costs here.</p>
+    </footer>
+  </div>
+
+  <div id="viewer" class="viewer no-print" hidden>
+    <div class="viewer-card" role="dialog" aria-modal="true" aria-label="Receipt image">
+      <img id="viewer-image" alt="Receipt image">
+      <button id="viewer-close" class="secondary" type="button">Close</button>
+    </div>
+  </div>
+
+  <div id="dialog" class="dialog" hidden>
+    <div class="dialog-card" role="alertdialog" aria-modal="true" aria-labelledby="dialog-message">
+      <p id="dialog-message"></p>
+      <div class="inline-actions">
+        <button id="dialog-cancel" class="secondary" type="button">Cancel</button>
+        <button id="dialog-confirm" class="primary" type="button">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const STORAGE_KEY = 'tax-deduction-tracker-v1';
+      const DB_NAME = 'tax-deduction-tracker-v1';
+      const IMAGE_STORE = 'images';
+      const MAX_CENTS = 100000000;
+      const MAX_IMAGES = 8;
+      const BUILTIN_CATEGORIES = [
+        { name: 'Truck', percent: 80 },
+        { name: 'Gasoline', percent: 100 },
+        { name: 'Home Office', percent: 100 },
+        { name: 'Software', percent: 100 },
+        { name: 'Internet', percent: 100 },
+        { name: 'Phone', percent: 100 },
+        { name: 'Supplies', percent: 100 },
+        { name: 'Education', percent: 100 },
+        { name: 'Meals', percent: 100 },
+        { name: 'Other', percent: 100 }
+      ];
+      const SEED_PRESETS = [
+        { label: 'Monthly software', category: 'Software', businessPercent: 100, description: 'Monthly software' },
+        { label: 'Truck loan interest', category: 'Truck', businessPercent: 80, description: 'Truck loan interest' },
+        { label: 'Truck fuel', category: 'Gasoline', businessPercent: 80, description: 'Gasoline' },
+        { label: 'Home office', category: 'Home Office', businessPercent: 100, description: '' },
+        { label: 'Internet', category: 'Internet', businessPercent: 100, description: '' },
+        { label: 'Phone', category: 'Phone', businessPercent: 100, description: '' }
+      ];
+      const INVALID_BACKUP = 'That file is not a version 1 backup. The current log was not changed.';
+
+      const $ = (id) => document.getElementById(id);
+      const yearSelect = $('year');
+      const totalNumber = $('total');
+      const totalMeta = $('total-meta');
+      const summaryHeading = $('summary-heading');
+      const bars = $('bars');
+      const printCategories = $('print-categories');
+      const printStamp = $('print-stamp');
+      const form = $('expense-form');
+      const formHeading = $('form-heading');
+      const dateInput = $('date');
+      const amountInput = $('amount');
+      const categorySelect = $('category');
+      const percentInput = $('business-percent');
+      const descriptionInput = $('description');
+      const receiptInput = $('receipt-note');
+      const receiptImages = $('receipt-images');
+      const imagePreview = $('image-preview');
+      const imageError = $('image-error');
+      const yearRange = $('year-range');
+      const viewer = $('viewer');
+      const viewerImage = $('viewer-image');
+      const submitButton = $('submit-expense');
+      const cancelButton = $('cancel-edit');
+      const presetList = $('preset-list');
+      const savePresetOpen = $('save-preset-open');
+      const savePresetPanel = $('save-preset-panel');
+      const presetLabelInput = $('preset-label');
+      const presetError = $('preset-error');
+      const defaultsList = $('defaults-list');
+      const defaultsError = $('defaults-error');
+      const addCategoryForm = $('add-category-form');
+      const newCategoryInput = $('new-category');
+      const newCategoryPercent = $('new-category-percent');
+      const newCategoryError = $('new-category-error');
+      const categoryFilter = $('category-filter');
+      const fromInput = $('from-date');
+      const toInput = $('to-date');
+      const searchInput = $('search');
+      const filterHint = $('filter-hint');
+      const mobileSort = $('mobile-sort');
+      const showing = $('showing');
+      const tableBody = $('expense-rows');
+      const backupStatus = $('backup-status');
+      const statusBox = $('status');
+      const alertBox = $('alert');
+      const banner = $('storage-banner');
+      const dialog = $('dialog');
+      const dialogMessage = $('dialog-message');
+      const dialogConfirm = $('dialog-confirm');
+      const dialogCancel = $('dialog-cancel');
+
+      const filters = {
+        year: String(currentFiscalYear()),
+        category: '',
+        from: '',
+        to: '',
+        q: ''
+      };
+      const sortState = { key: 'date', dir: 'desc' };
+      let store = null;
+      let persist = 'ok';
+      let editingId = null;
+      let percentTouched = false;
+      let dialogOpen = false;
+      let saving = false;
+      let imagesBusy = 0;
+      let imageBatch = 0;
+      let pendingImages = [];
+      let imageDbPromise = null;
+      const imageRecords = new Map();
+      const imageUrls = new Map();
+
+      // --- Money and dates ---
+
+      function deductibleCents(amountCents, businessPercent) {
+        const basisPoints = Math.round(businessPercent * 100);
+        const numerator = amountCents * basisPoints;
+        const negative = numerator < 0;
+        const abs = Math.abs(numerator);
+        let whole = Math.floor(abs / 10000);
+        const remainder = abs % 10000;
+        if (remainder * 2 >= 10000) whole += 1;
+        return negative ? -whole : whole;
+      }
+
+      function roundPercent(value) {
+        return Math.round(value * 100) / 100;
+      }
+
+      function formatPercent(value) {
+        return String(roundPercent(value));
+      }
+
+      function formatMoney(cents) {
+        const negative = cents < 0;
+        const abs = Math.abs(cents);
+        const whole = Math.floor(abs / 100).toLocaleString('en-US');
+        const frac = String(abs % 100).padStart(2, '0');
+        return `${negative ? '-' : ''}$${whole}.${frac}`;
+      }
+
+      function formatDollarsPlain(cents) {
+        const negative = cents < 0;
+        const abs = Math.abs(cents);
+        const whole = Math.floor(abs / 100);
+        const frac = String(abs % 100).padStart(2, '0');
+        return `${negative ? '-' : ''}${whole}.${frac}`;
+      }
+
+      function formatAmountInput(cents) {
+        return formatDollarsPlain(cents);
+      }
+
+      function formatDate(iso) {
+        const [year, month, day] = iso.split('-').map(Number);
+        return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+      }
+
+      function todayISO() {
+        const now = new Date();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${now.getFullYear()}-${month}-${day}`;
+      }
+
+      function fiscalYearOf(isoDate) {
+        const year = Number(isoDate.slice(0, 4));
+        const month = Number(isoDate.slice(5, 7));
+        return month >= 10 ? year + 1 : year;
+      }
+
+      function currentFiscalYear() {
+        return fiscalYearOf(todayISO());
+      }
+
+      function fiscalRange(year) {
+        const endYear = Number(year);
+        return `Oct 1, ${endYear - 1} to Sep 30, ${endYear}`;
+      }
+
+      function isIsoDate(value) {
+        if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+        const [year, month, day] = value.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+      }
+
+      function isPercent(value) {
+        return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100;
+      }
+
+      function parseAmountToCents(raw) {
+        let text = String(raw).trim().replace(/\$/g, '').replace(/,/g, '').replace(/\s+/g, '');
+        if (!text) return { error: 'Enter an amount.' };
+        if (/^-?\d+\.$/.test(text)) text = text.slice(0, -1);
+        if (!/^-?\d+(\.\d{1,2})?$/.test(text)) {
+          return { error: 'Use a non-zero amount with up to two decimals.' };
+        }
+        const negative = text.startsWith('-');
+        const body = negative ? text.slice(1) : text;
+        const [whole, frac = ''] = body.split('.');
+        const cents = Number(whole) * 100 + Number(frac.padEnd(2, '0'));
+        if (!Number.isSafeInteger(cents)) return { error: 'Amount must be under $1,000,000.' };
+        const signed = negative ? -cents : cents;
+        if (signed === 0) return { error: 'Amount cannot be zero.' };
+        if (Math.abs(signed) >= MAX_CENTS) return { error: 'Amount must be under $1,000,000.' };
+        return { cents: signed };
+      }
+
+      function parsePercent(raw) {
+        let text = String(raw).trim().replace(/%/g, '').replace(/\s+/g, '');
+        if (!text) return { error: 'Enter a business %.' };
+        if (/^\d+\.$/.test(text)) text = text.slice(0, -1);
+        if (!/^\d+(\.\d{1,2})?$/.test(text)) return { error: 'Business % must be from 0 to 100.' };
+        const value = roundPercent(Number(text));
+        if (value < 0 || value > 100) return { error: 'Business % must be from 0 to 100.' };
+        return { value };
+      }
+
+      function parseDate(raw) {
+        if (!raw) return { error: 'Enter a date.' };
+        if (!isIsoDate(raw)) return { error: 'Enter a valid date.' };
+        return { value: raw };
+      }
+
+      function newId() {
+        if (globalThis.crypto && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+        return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      }
+
+      // --- Storage ---
+
+      function freshStore() {
+        const categoryDefaults = {};
+        BUILTIN_CATEGORIES.forEach((category) => {
+          categoryDefaults[category.name] = category.percent;
+        });
+        return {
+          version: 1,
+          expenses: [],
+          presets: SEED_PRESETS.map((preset) => ({
+            id: newId(),
+            label: preset.label,
+            category: preset.category,
+            businessPercent: preset.businessPercent,
+            description: preset.description,
+            receiptNote: '',
+            amountCents: null
+          })),
+          categoryDefaults,
+          customCategories: [],
+          meta: { lastBackupAt: null }
+        };
+      }
+
+      function validateBackup(data) {
+        const fail = () => ({ ok: false, error: INVALID_BACKUP });
+        if (!data || typeof data !== 'object' || Array.isArray(data)) return fail();
+        if (data.version !== 1) return fail();
+        if (!Array.isArray(data.expenses) || !Array.isArray(data.presets) || !Array.isArray(data.customCategories)) return fail();
+        if (!data.categoryDefaults || typeof data.categoryDefaults !== 'object' || Array.isArray(data.categoryDefaults)) return fail();
+
+        const expenses = [];
+        const expenseIds = new Set();
+        for (const exp of data.expenses) {
+          if (!exp || typeof exp !== 'object' || Array.isArray(exp)) return fail();
+          if (typeof exp.id !== 'string' || exp.id.trim() === '' || expenseIds.has(exp.id)) return fail();
+          if (!isIsoDate(exp.date)) return fail();
+          if (!Number.isInteger(exp.amountCents) || exp.amountCents === 0 || Math.abs(exp.amountCents) >= MAX_CENTS) return fail();
+          if (typeof exp.category !== 'string' || exp.category.trim() === '' || exp.category.trim().length > 40) return fail();
+          if (!isPercent(exp.businessPercent)) return fail();
+          const description = exp.description == null ? '' : exp.description;
+          const receiptNote = exp.receiptNote == null ? '' : exp.receiptNote;
+          if (typeof description !== 'string' || description.length > 200) return fail();
+          if (typeof receiptNote !== 'string' || receiptNote.length > 200) return fail();
+          let imageIds = [];
+          if (exp.imageIds != null) {
+            if (!Array.isArray(exp.imageIds) || exp.imageIds.length > 12) return fail();
+            const seenImages = new Set();
+            for (const id of exp.imageIds) {
+              if (typeof id !== 'string' || id.trim() === '' || seenImages.has(id)) return fail();
+              seenImages.add(id);
+              imageIds.push(id);
+            }
+          }
+          expenseIds.add(exp.id);
+          const now = new Date().toISOString();
+          expenses.push({
+            id: exp.id,
+            date: exp.date,
+            amountCents: exp.amountCents,
+            category: exp.category.trim(),
+            businessPercent: roundPercent(exp.businessPercent),
+            description: description.trim(),
+            receiptNote: receiptNote.trim(),
+            imageIds,
+            createdAt: typeof exp.createdAt === 'string' && exp.createdAt ? exp.createdAt : now,
+            updatedAt: typeof exp.updatedAt === 'string' && exp.updatedAt ? exp.updatedAt : now
+          });
+        }
+
+        const images = [];
+        if (data.images != null) {
+          if (!Array.isArray(data.images)) return fail();
+          const seen = new Set();
+          for (const image of data.images) {
+            if (!image || typeof image !== 'object' || Array.isArray(image)) return fail();
+            if (typeof image.id !== 'string' || image.id.trim() === '' || seen.has(image.id)) return fail();
+            if (typeof image.expenseId !== 'string' || !expenseIds.has(image.expenseId)) return fail();
+            const owner = expenses.find((exp) => exp.id === image.expenseId);
+            if (!owner || !owner.imageIds.includes(image.id)) return fail();
+            if (typeof image.data !== 'string') return fail();
+            const payload = image.data.replace(/\s/g, '');
+            if (payload.length < 16 || payload.length > 4000000 || !/^[A-Za-z0-9+/=]+$/.test(payload)) return fail();
+            seen.add(image.id);
+            images.push({
+              id: image.id,
+              expenseId: image.expenseId,
+              name: typeof image.name === 'string' && image.name.trim() ? image.name.trim().slice(0, 120) : 'receipt.jpg',
+              type: image.type === 'image/png' ? 'image/png' : 'image/jpeg',
+              data: payload
+            });
+          }
+        }
+
+        const presets = [];
+        const presetIds = new Set();
+        for (const preset of data.presets) {
+          if (!preset || typeof preset !== 'object' || Array.isArray(preset)) return fail();
+          if (typeof preset.id !== 'string' || preset.id.trim() === '' || presetIds.has(preset.id)) return fail();
+          if (typeof preset.label !== 'string' || preset.label.trim() === '' || preset.label.trim().length > 40) return fail();
+          if (typeof preset.category !== 'string' || preset.category.trim() === '' || preset.category.trim().length > 40) return fail();
+          if (!isPercent(preset.businessPercent)) return fail();
+          const description = preset.description == null ? '' : preset.description;
+          const receiptNote = preset.receiptNote == null ? '' : preset.receiptNote;
+          if (typeof description !== 'string' || description.length > 200) return fail();
+          if (typeof receiptNote !== 'string' || receiptNote.length > 200) return fail();
+          let amountCents = null;
+          if (preset.amountCents != null) {
+            if (!Number.isInteger(preset.amountCents) || preset.amountCents === 0 || Math.abs(preset.amountCents) >= MAX_CENTS) return fail();
+            amountCents = preset.amountCents;
+          }
+          presetIds.add(preset.id);
+          presets.push({
+            id: preset.id,
+            label: preset.label.trim(),
+            category: preset.category.trim(),
+            businessPercent: roundPercent(preset.businessPercent),
+            description: description.trim(),
+            receiptNote: receiptNote.trim(),
+            amountCents
+          });
+        }
+
+        const builtinKeys = new Set(BUILTIN_CATEGORIES.map((category) => category.name.toLowerCase()));
+        const customCategories = [];
+        const customKeys = new Set();
+        for (const name of data.customCategories) {
+          if (typeof name !== 'string') return fail();
+          const trimmed = name.trim();
+          if (!trimmed || trimmed.length > 40) return fail();
+          const key = trimmed.toLowerCase();
+          if (builtinKeys.has(key) || customKeys.has(key)) return fail();
+          customKeys.add(key);
+          customCategories.push(trimmed);
+        }
+
+        const categoryDefaults = {};
+        for (const category of BUILTIN_CATEGORIES) {
+          const incoming = data.categoryDefaults[category.name];
+          if (incoming == null) categoryDefaults[category.name] = category.percent;
+          else if (!isPercent(incoming)) return fail();
+          else categoryDefaults[category.name] = roundPercent(incoming);
+        }
+        for (const name of customCategories) {
+          const incoming = data.categoryDefaults[name];
+          if (incoming == null) categoryDefaults[name] = 100;
+          else if (!isPercent(incoming)) return fail();
+          else categoryDefaults[name] = roundPercent(incoming);
+        }
+
+        let lastBackupAt = null;
+        if (data.meta && typeof data.meta === 'object' && !Array.isArray(data.meta) && typeof data.meta.lastBackupAt === 'string' && data.meta.lastBackupAt) {
+          lastBackupAt = data.meta.lastBackupAt;
+        }
+
+        return {
+          ok: true,
+          images,
+          store: {
+            version: 1,
+            expenses,
+            presets,
+            categoryDefaults,
+            customCategories,
+            meta: { lastBackupAt }
+          }
+        };
+      }
+
+      function openImageDb() {
+        if (!imageDbPromise) {
+          imageDbPromise = new Promise((resolve, reject) => {
+            if (!globalThis.indexedDB) {
+              reject(new Error('IndexedDB is unavailable'));
+              return;
+            }
+            const request = indexedDB.open(DB_NAME, 1);
+            request.onupgradeneeded = () => {
+              const database = request.result;
+              if (!database.objectStoreNames.contains(IMAGE_STORE)) database.createObjectStore(IMAGE_STORE, { keyPath: 'id' });
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+          });
+        }
+        return imageDbPromise;
+      }
+
+      function idbGetAll() {
+        return openImageDb().then((database) => new Promise((resolve, reject) => {
+          const request = database.transaction(IMAGE_STORE, 'readonly').objectStore(IMAGE_STORE).getAll();
+          request.onsuccess = () => resolve(request.result || []);
+          request.onerror = () => reject(request.error);
+        }));
+      }
+
+      function idbPut(record) {
+        return openImageDb().then((database) => new Promise((resolve, reject) => {
+          const request = database.transaction(IMAGE_STORE, 'readwrite').objectStore(IMAGE_STORE).put(record);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        }));
+      }
+
+      function idbDelete(id) {
+        return openImageDb().then((database) => new Promise((resolve, reject) => {
+          const request = database.transaction(IMAGE_STORE, 'readwrite').objectStore(IMAGE_STORE).delete(id);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        }));
+      }
+
+      async function loadImages() {
+        try {
+          const records = await idbGetAll();
+          const wanted = new Set();
+          if (persist === 'ok') {
+            store.expenses.forEach((exp) => (exp.imageIds || []).forEach((id) => wanted.add(id)));
+          }
+          for (const record of records) {
+            if (!record || !record.id || !record.blob) continue;
+            if (persist === 'ok' && !wanted.has(record.id)) {
+              await idbDelete(record.id);
+              continue;
+            }
+            imageRecords.set(record.id, record);
+          }
+        } catch (error) {
+          imageRecords.clear();
+        }
+      }
+
+      function urlFor(record) {
+        if (!imageUrls.has(record.id)) imageUrls.set(record.id, URL.createObjectURL(record.blob));
+        return imageUrls.get(record.id);
+      }
+
+      async function rememberImage(image, expenseId) {
+        const record = {
+          id: image.id,
+          expenseId,
+          blob: image.blob,
+          name: image.name || 'receipt.jpg',
+          type: image.blob.type || 'image/jpeg'
+        };
+        imageRecords.set(record.id, record);
+        if (!imageUrls.has(record.id)) imageUrls.set(record.id, image.url || URL.createObjectURL(record.blob));
+        try {
+          await idbPut(record);
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+
+      async function forgetImage(id) {
+        imageRecords.delete(id);
+        const url = imageUrls.get(id);
+        if (url) URL.revokeObjectURL(url);
+        imageUrls.delete(id);
+        try {
+          await idbDelete(id);
+        } catch (error) {
+          return;
+        }
+      }
+
+      async function replaceAllImages(images) {
+        const keep = new Set(images.map((image) => image.id));
+        for (const id of Array.from(imageRecords.keys())) {
+          if (!keep.has(id)) await forgetImage(id);
+        }
+        for (const image of images) await rememberImage(image, image.expenseId);
+      }
+
+      function base64ToBlob(data, type) {
+        const binary = atob(data);
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+        return new Blob([bytes], { type });
+      }
+
+      function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const text = String(reader.result || '');
+            const comma = text.indexOf(',');
+            resolve(comma >= 0 ? text.slice(comma + 1) : text);
+          };
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      function compressImage(file) {
+        return new Promise((resolve, reject) => {
+          const source = URL.createObjectURL(file);
+          const image = new Image();
+          image.onload = () => {
+            const maxEdge = 1600;
+            const scale = Math.min(1, maxEdge / Math.max(image.naturalWidth || 1, image.naturalHeight || 1));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round((image.naturalWidth || 1) * scale));
+            canvas.height = Math.max(1, Math.round((image.naturalHeight || 1) * scale));
+            const context = canvas.getContext('2d');
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+              URL.revokeObjectURL(source);
+              if (!blob) reject(new Error('Could not save that image.'));
+              else resolve(blob);
+            }, 'image/jpeg', 0.82);
+          };
+          image.onerror = () => {
+            URL.revokeObjectURL(source);
+            reject(new Error('Could not read that image.'));
+          };
+          image.src = source;
+        });
+      }
+
+      function writeStore() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+          persist = 'ok';
+          return true;
+        } catch (error) {
+          persist = 'memory';
+          return false;
+        }
+      }
+
+      function saveStore() {
+        if (persist === 'frozen') return false;
+        const saved = writeStore();
+        if (!saved) renderBanner();
+        return saved;
+      }
+
+      function loadStore() {
+        let raw;
+        try {
+          raw = localStorage.getItem(STORAGE_KEY);
+        } catch (error) {
+          persist = 'memory';
+          store = freshStore();
+          return;
+        }
+        if (raw == null) {
+          store = freshStore();
+          saveStore();
+          return;
+        }
+        try {
+          const result = validateBackup(JSON.parse(raw));
+          if (!result.ok) throw new Error(result.error);
+          store = result.store;
+          persist = 'ok';
+        } catch (error) {
+          persist = 'frozen';
+          store = freshStore();
+        }
+      }
+
+      function defaultPercent(name) {
+        const value = store.categoryDefaults[name];
+        if (typeof value === 'number') return value;
+        const builtin = BUILTIN_CATEGORIES.find((category) => category.name === name);
+        return builtin ? builtin.percent : 100;
+      }
+
+      function allCategoryNames() {
+        const names = BUILTIN_CATEGORIES.map((category) => category.name);
+        const seen = new Set(names.map((name) => name.toLowerCase()));
+        const extras = store.customCategories.slice();
+        store.expenses.forEach((exp) => extras.push(exp.category));
+        store.presets.forEach((preset) => extras.push(preset.category));
+        extras.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        extras.forEach((name) => {
+          const key = String(name).toLowerCase();
+          if (name && !seen.has(key)) {
+            seen.add(key);
+            names.push(name);
+          }
+        });
+        return names;
+      }
+
+      // --- Filter and sort ---
+
+      function hasExtraFilters() {
+        return Boolean(filters.category || filters.from || filters.to || filters.q.trim());
+      }
+
+      function matchesFilter(exp) {
+        if (filters.year !== 'all' && String(fiscalYearOf(exp.date)) !== filters.year) return false;
+        if (filters.category && exp.category !== filters.category) return false;
+        if (filters.from && exp.date < filters.from) return false;
+        if (filters.to && exp.date > filters.to) return false;
+        const query = filters.q.trim().toLowerCase();
+        if (query && !`${exp.description} ${exp.receiptNote}`.toLowerCase().includes(query)) return false;
+        return true;
+      }
+
+      function sortRows(rows) {
+        const copy = rows.slice();
+        copy.sort((a, b) => {
+          let result = 0;
+          if (sortState.key === 'date') result = a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt);
+          else if (sortState.key === 'description') result = a.description.localeCompare(b.description, undefined, { sensitivity: 'base' });
+          else if (sortState.key === 'category') result = a.category.localeCompare(b.category, undefined, { sensitivity: 'base' });
+          else if (sortState.key === 'amount') result = a.amountCents - b.amountCents;
+          else if (sortState.key === 'businessPercent') result = a.businessPercent - b.businessPercent;
+          else result = deductibleCents(a.amountCents, a.businessPercent) - deductibleCents(b.amountCents, b.businessPercent);
+          if (result === 0 && sortState.key !== 'date') {
+            result = a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt);
+          }
+          return sortState.dir === 'asc' ? result : -result;
+        });
+        return copy;
+      }
+
+      function summarize(rows) {
+        let amount = 0;
+        let deductible = 0;
+        const byCategory = new Map();
+        rows.forEach((exp) => {
+          const ded = deductibleCents(exp.amountCents, exp.businessPercent);
+          amount += exp.amountCents;
+          deductible += ded;
+          if (!byCategory.has(exp.category)) byCategory.set(exp.category, { amount: 0, deductible: 0 });
+          const bucket = byCategory.get(exp.category);
+          bucket.amount += exp.amountCents;
+          bucket.deductible += ded;
+        });
+        const categories = Array.from(byCategory.entries())
+          .map(([name, totals]) => ({ name, amount: totals.amount, deductible: totals.deductible }))
+          .sort((a, b) => Math.abs(b.deductible) - Math.abs(a.deductible) || a.name.localeCompare(b.name));
+        return { amount, deductible, categories };
+      }
+
+      function scopeLabel() {
+        if (hasExtraFilters()) return 'Filtered deductible';
+        if (filters.year === 'all') return 'All fiscal years deductible';
+        return `FY ${filters.year} deductible`;
+      }
+
+      function scopeDescription() {
+        const parts = filters.year === 'all'
+          ? ['All fiscal years']
+          : [`FY ${filters.year}`, fiscalRange(filters.year)];
+        if (filters.category) parts.push(filters.category);
+        if (filters.from) parts.push(`from ${formatDate(filters.from)}`);
+        if (filters.to) parts.push(`through ${formatDate(filters.to)}`);
+        if (filters.q.trim()) parts.push(`matching "${filters.q.trim()}"`);
+        return parts.join(' · ');
+      }
+
+      function emptyMessage() {
+        if (hasExtraFilters()) return 'No expenses match these filters.';
+        if (filters.year === 'all') return 'No expenses yet.';
+        return `No expenses for FY ${filters.year} yet.`;
+      }
+
+      function expenseCountLabel(count) {
+        return count === 1 ? '1 expense' : `${count} expenses`;
+      }
+
+      // --- Render ---
+
+      function setStatus(message) {
+        alertBox.textContent = '';
+        statusBox.textContent = message;
+      }
+
+      function setAlert(message) {
+        statusBox.textContent = '';
+        alertBox.textContent = message;
+      }
+
+      function renderBanner() {
+        if (persist === 'memory') {
+          banner.hidden = false;
+          banner.textContent = 'This browser is not saving data. Export a backup before you close the page.';
+        } else if (persist === 'frozen') {
+          banner.hidden = false;
+          banner.textContent = 'Saved data in this browser could not be read. New entries stay in this tab only and will not overwrite the old data. Export a backup before you close the page.';
+        } else {
+          banner.hidden = true;
+          banner.textContent = '';
+        }
+      }
+
+      function renderBackupStatus() {
+        if (!store.meta.lastBackupAt) {
+          backupStatus.textContent = 'No backup exported yet.';
+          return;
+        }
+        const date = new Date(store.meta.lastBackupAt);
+        backupStatus.textContent = Number.isNaN(date.getTime())
+          ? 'No backup exported yet.'
+          : `Last backup ${date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}`;
+      }
+
+      function fillSelect(select, options, preferred) {
+        const want = preferred == null ? select.value : preferred;
+        select.replaceChildren();
+        options.forEach((opt) => {
+          const option = document.createElement('option');
+          option.value = opt.value;
+          option.textContent = opt.label;
+          select.appendChild(option);
+        });
+        const has = options.some((opt) => opt.value === want);
+        select.value = has ? want : (options[0] ? options[0].value : '');
+        return select.value;
+      }
+
+      function renderYearOptions() {
+        const years = new Set([String(currentFiscalYear())]);
+        store.expenses.forEach((exp) => years.add(String(fiscalYearOf(exp.date))));
+        if (filters.year !== 'all') years.add(filters.year);
+        const options = Array.from(years)
+          .sort((a, b) => b.localeCompare(a))
+          .map((year) => ({ value: year, label: `FY ${year}` }));
+        options.push({ value: 'all', label: 'All fiscal years' });
+        filters.year = fillSelect(yearSelect, options, filters.year);
+      }
+
+      function renderCategorySelects() {
+        const names = allCategoryNames();
+        const formOptions = [{ value: '', label: 'Choose a category' }].concat(names.map((name) => ({ value: name, label: name })));
+        fillSelect(categorySelect, formOptions, categorySelect.value);
+        const filterValue = fillSelect(
+          categoryFilter,
+          [{ value: '', label: 'All categories' }].concat(names.map((name) => ({ value: name, label: name }))),
+          filters.category
+        );
+        filters.category = filterValue;
+      }
+
+      function renderFormMode() {
+        const editing = Boolean(editingId);
+        formHeading.textContent = editing ? 'Edit expense' : 'Add expense';
+        submitButton.textContent = editing ? 'Save changes' : 'Add expense';
+        cancelButton.hidden = !editing;
+      }
+
+      function renderPresets() {
+        presetList.replaceChildren();
+        if (!store.presets.length) {
+          const empty = document.createElement('p');
+          empty.className = 'muted';
+          empty.textContent = 'No presets yet.';
+          presetList.appendChild(empty);
+          return;
+        }
+        store.presets.forEach((preset) => {
+          const row = document.createElement('div');
+          row.className = 'preset';
+          const apply = document.createElement('button');
+          apply.type = 'button';
+          apply.className = 'preset-apply';
+          apply.dataset.applyPreset = preset.id;
+          const amount = preset.amountCents == null ? '' : ` · ${formatMoney(preset.amountCents)}`;
+          apply.textContent = `${preset.label} · ${formatPercent(preset.businessPercent)}%${amount}`;
+          apply.setAttribute('aria-label', `Apply preset ${preset.label}, ${preset.category}, ${formatPercent(preset.businessPercent)} percent`);
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'text-button danger';
+          remove.dataset.removePreset = preset.id;
+          remove.textContent = 'Remove';
+          remove.setAttribute('aria-label', `Remove preset ${preset.label}`);
+          row.append(apply, remove);
+          presetList.appendChild(row);
+        });
+      }
+
+      function renderDefaults() {
+        defaultsList.replaceChildren();
+        const custom = new Set(store.customCategories);
+        allCategoryNames().forEach((name) => {
+          if (!BUILTIN_CATEGORIES.some((category) => category.name === name) && !custom.has(name)) return;
+          const row = document.createElement('div');
+          row.className = 'default-row';
+          const label = document.createElement('span');
+          label.textContent = name;
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.inputMode = 'decimal';
+          input.setAttribute('aria-label', `${name} default business percent`);
+          input.dataset.defaultFor = name;
+          input.value = formatPercent(defaultPercent(name));
+          row.append(label, input);
+          if (custom.has(name)) {
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'text-button danger';
+            remove.dataset.removeCategory = name;
+            remove.textContent = 'Remove';
+            row.appendChild(remove);
+          } else {
+            const spacer = document.createElement('span');
+            spacer.setAttribute('aria-hidden', 'true');
+            row.appendChild(spacer);
+          }
+          defaultsList.appendChild(row);
+        });
+      }
+
+      function renderBars(categories) {
+        bars.replaceChildren();
+        if (!categories.length) {
+          const empty = document.createElement('p');
+          empty.className = 'muted';
+          empty.textContent = 'Category totals appear after the first expense in this view.';
+          bars.appendChild(empty);
+          return;
+        }
+        const maxAbs = Math.max.apply(null, categories.map((category) => Math.abs(category.deductible)).concat(1));
+        categories.forEach((category) => {
+          const row = document.createElement('div');
+          row.className = 'bar-row';
+          const name = document.createElement('span');
+          name.className = 'bar-name';
+          name.textContent = category.name;
+          const track = document.createElement('div');
+          track.className = 'bar-track';
+          const fill = document.createElement('span');
+          fill.className = category.deductible < 0 ? 'bar-fill negative' : 'bar-fill';
+          const width = Math.round(Math.abs(category.deductible) / maxAbs * 1000) / 10;
+          fill.style.width = `${width}%`;
+          track.appendChild(fill);
+          const value = document.createElement('span');
+          value.className = category.deductible < 0 ? 'bar-value negative' : 'bar-value';
+          value.textContent = formatMoney(category.deductible);
+          row.append(name, track, value);
+          bars.appendChild(row);
+        });
+      }
+
+      function headerCell(parent, text, scope) {
+        const cell = document.createElement(scope === 'row' ? 'th' : 'th');
+        if (scope) cell.scope = scope;
+        cell.textContent = text;
+        parent.appendChild(cell);
+        return cell;
+      }
+
+      function renderPrintCategories(categories, deductible, amount) {
+        printCategories.replaceChildren();
+        const caption = document.createElement('caption');
+        caption.textContent = 'Category totals';
+        const thead = document.createElement('thead');
+        const headRow = document.createElement('tr');
+        ['Category', 'Amount', 'Deductible'].forEach((label) => headerCell(headRow, label, 'col'));
+        thead.appendChild(headRow);
+        const tbody = document.createElement('tbody');
+        categories.forEach((category) => {
+          const row = document.createElement('tr');
+          const name = document.createElement('td');
+          name.textContent = category.name;
+          const spent = document.createElement('td');
+          spent.textContent = formatMoney(category.amount);
+          const ded = document.createElement('td');
+          ded.textContent = formatMoney(category.deductible);
+          row.append(name, spent, ded);
+          tbody.appendChild(row);
+        });
+        const tfoot = document.createElement('tfoot');
+        const totalRow = document.createElement('tr');
+        headerCell(totalRow, 'Total', 'row');
+        const spent = document.createElement('td');
+        spent.textContent = formatMoney(amount);
+        const ded = document.createElement('td');
+        ded.textContent = formatMoney(deductible);
+        totalRow.append(spent, ded);
+        tfoot.appendChild(totalRow);
+        printCategories.append(caption, thead, tbody, tfoot);
+      }
+
+      function renderSortState() {
+        document.querySelectorAll('th[data-sort-key]').forEach((th) => {
+          const key = th.dataset.sortKey;
+          const active = sortState.key === key;
+          th.setAttribute('aria-sort', active ? (sortState.dir === 'asc' ? 'ascending' : 'descending') : 'none');
+          const mark = th.querySelector('.sort-mark');
+          if (mark) mark.textContent = active ? (sortState.dir === 'asc' ? ' ↑' : ' ↓') : '';
+        });
+        const sortValue = `${sortState.key}:${sortState.dir}`;
+        if (Array.from(mobileSort.options).some((option) => option.value === sortValue)) mobileSort.value = sortValue;
+      }
+
+      function appendThumbs(parent, exp) {
+        const ids = exp.imageIds || [];
+        if (!ids.length) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'thumbs';
+        ids.forEach((id, index) => {
+          const record = imageRecords.get(id);
+          if (!record) return;
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'thumb';
+          button.dataset.action = 'view-image';
+          button.dataset.imageId = id;
+          button.setAttribute('aria-label', `View receipt image ${index + 1}`);
+          const img = document.createElement('img');
+          img.alt = '';
+          img.src = urlFor(record);
+          button.appendChild(img);
+          wrap.appendChild(button);
+        });
+        if (wrap.childElementCount) parent.appendChild(wrap);
+      }
+
+      function openViewer(id) {
+        const record = imageRecords.get(id);
+        if (!record) return;
+        viewerImage.src = urlFor(record);
+        viewer.hidden = false;
+        $('viewer-close').focus();
+      }
+
+      function closeViewer() {
+        viewer.hidden = true;
+        viewerImage.removeAttribute('src');
+      }
+
+      function renderTable(rows) {
+        renderSortState();
+        tableBody.replaceChildren();
+        if (!rows.length) {
+          const row = document.createElement('tr');
+          const cell = document.createElement('td');
+          cell.colSpan = 7;
+          cell.className = 'empty';
+          cell.textContent = emptyMessage();
+          row.appendChild(cell);
+          tableBody.appendChild(row);
+          return;
+        }
+        rows.forEach((exp) => {
+          const row = document.createElement('tr');
+          const dateCell = document.createElement('td');
+          dateCell.dataset.label = 'Date';
+          dateCell.textContent = formatDate(exp.date);
+          const desc = document.createElement('td');
+          desc.className = 'desc';
+          desc.dataset.label = 'Description';
+          if (exp.description) desc.appendChild(document.createTextNode(exp.description));
+          else if (!exp.receiptNote) {
+            const dash = document.createElement('span');
+            dash.className = 'muted';
+            dash.textContent = '—';
+            desc.appendChild(dash);
+          }
+          if (exp.receiptNote) {
+            const note = document.createElement('span');
+            note.className = 'note';
+            note.textContent = exp.receiptNote;
+            desc.appendChild(note);
+          }
+          appendThumbs(desc, exp);
+          const categoryCell = document.createElement('td');
+          categoryCell.dataset.label = 'Category';
+          categoryCell.textContent = exp.category;
+          const amountCell = document.createElement('td');
+          amountCell.className = exp.amountCents < 0 ? 'num negative' : 'num';
+          amountCell.dataset.label = 'Amount';
+          amountCell.textContent = formatMoney(exp.amountCents);
+          const percentCell = document.createElement('td');
+          percentCell.className = 'num';
+          percentCell.dataset.label = 'Business %';
+          percentCell.textContent = `${formatPercent(exp.businessPercent)}%`;
+          const deductible = deductibleCents(exp.amountCents, exp.businessPercent);
+          const dedCell = document.createElement('td');
+          dedCell.className = deductible < 0 ? 'num negative' : 'num deductible';
+          dedCell.dataset.label = 'Deductible';
+          dedCell.textContent = formatMoney(deductible);
+          const actions = document.createElement('td');
+          actions.className = 'actions no-print';
+          actions.dataset.label = 'Actions';
+          const edit = document.createElement('button');
+          edit.type = 'button';
+          edit.className = 'text-button';
+          edit.dataset.action = 'edit';
+          edit.dataset.id = exp.id;
+          edit.textContent = 'Edit';
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'text-button danger';
+          remove.dataset.action = 'delete';
+          remove.dataset.id = exp.id;
+          remove.textContent = 'Delete';
+          actions.append(edit, remove);
+          row.append(dateCell, desc, categoryCell, amountCell, percentCell, dedCell, actions);
+          tableBody.appendChild(row);
+        });
+      }
+
+      function updatePrintStamp() {
+        const when = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        printStamp.textContent = `${scopeDescription()} · Printed ${when}`;
+      }
+
+      function renderResults() {
+        const rows = sortRows(store.expenses.filter(matchesFilter));
+        const totals = summarize(rows);
+        summaryHeading.textContent = scopeLabel();
+        yearRange.textContent = filters.year === 'all'
+          ? 'Fiscal year runs October 1 through September 30.'
+          : fiscalRange(filters.year);
+        totalNumber.textContent = formatMoney(totals.deductible);
+        totalNumber.classList.toggle('negative', totals.deductible < 0);
+        totalMeta.textContent = `${expenseCountLabel(rows.length)} · ${formatMoney(totals.amount)} entered`;
+        showing.textContent = rows.length === store.expenses.length ? '' : `Showing ${rows.length} of ${store.expenses.length}`;
+        filterHint.textContent = filters.from && filters.to && filters.from > filters.to
+          ? 'The start date is after the end date.'
+          : '';
+        renderBars(totals.categories);
+        renderPrintCategories(totals.categories, totals.deductible, totals.amount);
+        renderTable(rows);
+        updatePrintStamp();
+      }
+
+      function renderAll() {
+        renderBanner();
+        renderBackupStatus();
+        renderYearOptions();
+        renderCategorySelects();
+        renderPresets();
+        renderDefaults();
+        renderFormMode();
+        renderResults();
+      }
+
+      function refreshAfterExpenseChange() {
+        saveStore();
+        renderYearOptions();
+        renderCategorySelects();
+        renderResults();
+        renderBanner();
+      }
+
+      // --- Form and presets ---
+
+      function clearFormErrors() {
+        form.querySelectorAll('[aria-invalid]').forEach((field) => field.removeAttribute('aria-invalid'));
+        form.querySelectorAll('.field-error').forEach((field) => { field.textContent = ''; });
+      }
+
+      function showFieldError(input, message) {
+        const error = document.getElementById(input.getAttribute('aria-describedby'));
+        if (error) error.textContent = message;
+        input.setAttribute('aria-invalid', 'true');
+      }
+
+      function renderImagePreview() {
+        imagePreview.replaceChildren();
+        pendingImages.forEach((image) => {
+          const figure = document.createElement('figure');
+          const img = document.createElement('img');
+          img.src = image.url;
+          img.alt = image.name || 'Receipt image';
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'text-button danger';
+          remove.dataset.removeImage = image.id;
+          remove.textContent = 'Remove';
+          figure.append(img, remove);
+          imagePreview.appendChild(figure);
+        });
+      }
+
+      function releasePending() {
+        imageBatch += 1;
+        pendingImages.forEach((image) => {
+          if (!imageRecords.has(image.id) && image.url && !imageUrls.has(image.id)) URL.revokeObjectURL(image.url);
+        });
+        pendingImages = [];
+        if (receiptImages) receiptImages.value = '';
+        imageError.textContent = '';
+        renderImagePreview();
+      }
+
+      function removePending(id) {
+        const image = pendingImages.find((item) => item.id === id);
+        pendingImages = pendingImages.filter((item) => item.id !== id);
+        if (image && !imageRecords.has(id) && image.url) URL.revokeObjectURL(image.url);
+        renderImagePreview();
+      }
+
+      async function addImageFiles(fileList) {
+        const files = Array.from(fileList || []);
+        const batch = imageBatch;
+        imageError.textContent = '';
+        imagesBusy += 1;
+        submitButton.disabled = true;
+        try {
+          for (const file of files) {
+            if (batch !== imageBatch) return;
+            if (pendingImages.length >= MAX_IMAGES) {
+              imageError.textContent = 'You can attach up to 8 images.';
+              break;
+            }
+            if (!file.type || !file.type.startsWith('image/')) {
+              imageError.textContent = 'Use a JPEG or PNG.';
+              continue;
+            }
+            try {
+              const blob = await compressImage(file);
+              if (batch !== imageBatch) return;
+              if (blob.size > 2500000) {
+                imageError.textContent = 'That image is still too large after resizing.';
+                continue;
+              }
+              pendingImages.push({
+                id: newId(),
+                blob,
+                url: URL.createObjectURL(blob),
+                name: file.name || 'receipt.jpg'
+              });
+            } catch (error) {
+              imageError.textContent = 'One image could not be read. Use a JPEG or PNG.';
+            }
+          }
+        } finally {
+          imagesBusy -= 1;
+          if (batch === imageBatch) {
+            receiptImages.value = '';
+            renderImagePreview();
+          }
+          if (imagesBusy === 0 && !saving) submitButton.disabled = false;
+        }
+      }
+
+      function resetFormToAdd() {
+        editingId = null;
+        percentTouched = false;
+        dateInput.value = todayISO();
+        amountInput.value = '';
+        descriptionInput.value = '';
+        receiptInput.value = '';
+        categorySelect.value = '';
+        percentInput.value = '';
+        releasePending();
+        clearFormErrors();
+        renderFormMode();
+      }
+
+      function clearEntryFields() {
+        amountInput.value = '';
+        descriptionInput.value = '';
+        receiptInput.value = '';
+        percentTouched = false;
+        releasePending();
+        clearFormErrors();
+      }
+
+      function startEdit(exp) {
+        editingId = exp.id;
+        percentTouched = false;
+        clearFormErrors();
+        dateInput.value = exp.date;
+        amountInput.value = formatAmountInput(exp.amountCents);
+        renderCategorySelects();
+        categorySelect.value = exp.category;
+        percentInput.value = formatPercent(exp.businessPercent);
+        descriptionInput.value = exp.description;
+        receiptInput.value = exp.receiptNote;
+        releasePending();
+        (exp.imageIds || []).forEach((id) => {
+          const record = imageRecords.get(id);
+          if (!record) return;
+          pendingImages.push({
+            id: record.id,
+            blob: record.blob,
+            url: urlFor(record),
+            name: record.name
+          });
+        });
+        renderImagePreview();
+        renderFormMode();
+        form.scrollIntoView({ block: 'start' });
+        dateInput.focus();
+      }
+
+      function applyPreset(preset) {
+        clearFormErrors();
+        renderCategorySelects();
+        categorySelect.value = preset.category;
+        percentInput.value = formatPercent(preset.businessPercent);
+        descriptionInput.value = preset.description;
+        receiptInput.value = preset.receiptNote || '';
+        amountInput.value = preset.amountCents == null ? '' : formatAmountInput(preset.amountCents);
+        percentTouched = false;
+        amountInput.focus();
+        if (preset.amountCents != null) amountInput.select();
+      }
+
+      async function removePreset(preset) {
+        const ok = await askConfirm(`Remove the preset "${preset.label}"?`, 'Remove');
+        if (!ok) return;
+        store.presets = store.presets.filter((item) => item.id !== preset.id);
+        saveStore();
+        renderPresets();
+        setStatus('Preset removed.');
+      }
+
+      function savePresetFromForm() {
+        presetError.textContent = '';
+        const label = presetLabelInput.value.trim();
+        if (!label) {
+          presetError.textContent = 'Enter a preset name.';
+          presetLabelInput.focus();
+          return;
+        }
+        if (label.length > 40) {
+          presetError.textContent = 'Keep the preset name to 40 characters.';
+          return;
+        }
+        if (store.presets.some((preset) => preset.label.toLowerCase() === label.toLowerCase())) {
+          presetError.textContent = 'A preset with that name already exists.';
+          return;
+        }
+        if (!categorySelect.value) {
+          presetError.textContent = 'Choose a category before saving a preset.';
+          return;
+        }
+        let amountCents = null;
+        if (amountInput.value.trim()) {
+          const amount = parseAmountToCents(amountInput.value);
+          if (amount.error) {
+            presetError.textContent = 'Enter a valid amount or leave the amount blank.';
+            return;
+          }
+          amountCents = amount.cents;
+        }
+        const percent = parsePercent(percentInput.value);
+        if (percent.error) {
+          presetError.textContent = percent.error;
+          return;
+        }
+        const description = descriptionInput.value.trim();
+        const receiptNote = receiptInput.value.trim();
+        if (description.length > 200 || receiptNote.length > 200) {
+          presetError.textContent = 'Description and receipt note must be 200 characters or less.';
+          return;
+        }
+        store.presets.push({
+          id: newId(),
+          label,
+          category: categorySelect.value,
+          businessPercent: percent.value,
+          description,
+          receiptNote,
+          amountCents
+        });
+        saveStore();
+        presetLabelInput.value = '';
+        savePresetPanel.hidden = true;
+        renderPresets();
+        setStatus('Preset saved.');
+      }
+
+      async function removeCustom(name) {
+        const ok = await askConfirm(`Remove the category "${name}"? Expenses already logged keep this name.`, 'Remove');
+        if (!ok) return;
+        const previous = categorySelect.value;
+        store.customCategories = store.customCategories.filter((category) => category !== name);
+        delete store.categoryDefaults[name];
+        saveStore();
+        renderCategorySelects();
+        renderDefaults();
+        if (categorySelect.value !== previous && !percentTouched) {
+          percentInput.value = categorySelect.value ? formatPercent(defaultPercent(categorySelect.value)) : '';
+        }
+        setStatus('Category removed.');
+      }
+
+      async function submitExpense(event) {
+        event.preventDefault();
+        if (saving) return;
+        clearFormErrors();
+        const date = parseDate(dateInput.value);
+        const amount = parseAmountToCents(amountInput.value);
+        const percent = parsePercent(percentInput.value);
+        const category = categorySelect.value;
+        const description = descriptionInput.value.trim();
+        const receiptNote = receiptInput.value.trim();
+        let invalid = false;
+        if (date.error) { showFieldError(dateInput, date.error); invalid = true; }
+        if (amount.error) { showFieldError(amountInput, amount.error); invalid = true; }
+        if (!category) { showFieldError(categorySelect, 'Choose a category.'); invalid = true; }
+        if (percent.error) { showFieldError(percentInput, percent.error); invalid = true; }
+        if (description.length > 200) { showFieldError(descriptionInput, 'Keep the description to 200 characters.'); invalid = true; }
+        if (receiptNote.length > 200) { showFieldError(receiptInput, 'Keep the receipt note to 200 characters.'); invalid = true; }
+        if (invalid) {
+          const first = form.querySelector('[aria-invalid="true"]');
+          if (first) first.focus();
+          return;
+        }
+        if (imagesBusy) {
+          imageError.textContent = 'Wait for the receipt images to finish.';
+          return;
+        }
+        saving = true;
+        submitButton.disabled = true;
+        try {
+          const now = new Date().toISOString();
+          const imagesToSave = pendingImages.slice();
+          let exp = editingId ? store.expenses.find((item) => item.id === editingId) : null;
+          const previousIds = exp ? (exp.imageIds || []).slice() : [];
+          if (!exp) {
+            exp = {
+              id: newId(),
+              date: date.value,
+              amountCents: amount.cents,
+              category,
+              businessPercent: percent.value,
+              description,
+              receiptNote,
+              imageIds: [],
+              createdAt: now,
+              updatedAt: now
+            };
+            store.expenses.push(exp);
+          } else {
+            exp.date = date.value;
+            exp.amountCents = amount.cents;
+            exp.category = category;
+            exp.businessPercent = percent.value;
+            exp.description = description;
+            exp.receiptNote = receiptNote;
+            exp.updatedAt = now;
+          }
+          exp.imageIds = imagesToSave.map((image) => image.id);
+          let imagesStored = true;
+          for (const image of imagesToSave) {
+            const stored = await rememberImage(image, exp.id);
+            if (!stored) imagesStored = false;
+          }
+          const keep = new Set(exp.imageIds);
+          for (const id of previousIds) {
+            if (!keep.has(id)) await forgetImage(id);
+          }
+          const visible = matchesFilter(exp);
+          const editing = Boolean(editingId);
+          if (editing) resetFormToAdd();
+          else clearEntryFields();
+          refreshAfterExpenseChange();
+          if (!editing) amountInput.focus();
+          if (!imagesStored) {
+            setAlert('The expense is saved in this tab, but a receipt image could not be stored. Export a backup before you close the page.');
+          } else if (editing) {
+            setStatus(visible ? 'Changes saved.' : 'Changes saved. It is outside the current filter.');
+          } else {
+            setStatus(visible ? 'Saved.' : 'Saved. It is outside the current filter.');
+          }
+        } finally {
+          saving = false;
+          if (imagesBusy === 0) submitButton.disabled = false;
+        }
+      }
+
+      async function deleteExpense(exp) {
+        const ok = await askConfirm('Delete this expense?', 'Delete');
+        if (!ok) return;
+        const imageIds = (exp.imageIds || []).slice();
+        store.expenses = store.expenses.filter((item) => item.id !== exp.id);
+        for (const id of imageIds) await forgetImage(id);
+        if (editingId === exp.id) resetFormToAdd();
+        refreshAfterExpenseChange();
+        setStatus('Expense deleted.');
+      }
+
+      // --- CSV and JSON ---
+
+      function csvCell(value) {
+        const text = String(value);
+        if (/[",\r\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+        return text;
+      }
+
+      function csvText(value) {
+        const text = String(value);
+        const guarded = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+        return csvCell(guarded);
+      }
+
+      function csvFilename() {
+        if (hasExtraFilters()) return 'tax-deductions-filtered.csv';
+        if (filters.year === 'all') return 'tax-deductions-all.csv';
+        return `tax-deductions-fy${filters.year}.csv`;
+      }
+
+      function buildCsv(rows) {
+        const lines = [['date', 'description', 'category', 'amount', 'business_percent', 'deductible', 'receipt_note', 'receipt_images'].join(',')];
+        rows.forEach((exp) => {
+          lines.push([
+            csvCell(exp.date),
+            csvText(exp.description),
+            csvText(exp.category),
+            csvCell(formatDollarsPlain(exp.amountCents)),
+            csvCell(formatPercent(exp.businessPercent)),
+            csvCell(formatDollarsPlain(deductibleCents(exp.amountCents, exp.businessPercent))),
+            csvText(exp.receiptNote),
+            csvCell(String((exp.imageIds || []).length))
+          ].join(','));
+        });
+        return `\uFEFF${lines.join('\r\n')}\r\n`;
+      }
+
+      function download(filename, content, type) {
+        const blob = new Blob([content], { type });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function exportCsv() {
+        const rows = sortRows(store.expenses.filter(matchesFilter));
+        download(csvFilename(), buildCsv(rows), 'text/csv;charset=utf-8');
+        setStatus('CSV downloaded for the expenses currently shown.');
+      }
+
+      async function exportJson() {
+        const images = [];
+        try {
+          for (const exp of store.expenses) {
+            for (const id of exp.imageIds || []) {
+              const record = imageRecords.get(id);
+              if (!record) continue;
+              images.push({
+                id: record.id,
+                expenseId: exp.id,
+                name: record.name || 'receipt.jpg',
+                type: record.type || 'image/jpeg',
+                data: await blobToBase64(record.blob)
+              });
+            }
+          }
+        } catch (error) {
+          setAlert('The backup could not be created. The current log was not changed.');
+          return;
+        }
+        store.meta.lastBackupAt = new Date().toISOString();
+        saveStore();
+        renderBackupStatus();
+        download('tax-deduction-backup.json', JSON.stringify({ ...store, images }, null, 2), 'application/json');
+        setStatus(persist === 'ok' ? 'Backup downloaded.' : 'Backup downloaded. This browser is still not saving data.');
+      }
+
+      async function importBackup(file) {
+        let text;
+        try {
+          text = await file.text();
+        } catch (error) {
+          setAlert('That file could not be read. The current log was not changed.');
+          return;
+        }
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (error) {
+          setAlert(INVALID_BACKUP);
+          return;
+        }
+        const result = validateBackup(data);
+        if (!result.ok) {
+          setAlert(result.error);
+          return;
+        }
+        let decoded;
+        try {
+          decoded = result.images.map((image) => ({
+            id: image.id,
+            expenseId: image.expenseId,
+            name: image.name,
+            blob: base64ToBlob(image.data, image.type)
+          }));
+        } catch (error) {
+          setAlert(INVALID_BACKUP);
+          return;
+        }
+        const ok = await askConfirm(
+          'Replace the current log with this backup? This overwrites expenses, presets, category defaults, and receipt images in this browser.',
+          'Replace'
+        );
+        if (!ok) {
+          setStatus('Import canceled.');
+          return;
+        }
+        store = result.store;
+        await replaceAllImages(decoded);
+        const saved = writeStore();
+        editingId = null;
+        percentTouched = false;
+        resetFormToAdd();
+        renderAll();
+        if (saved) setStatus('Backup restored.');
+        else setAlert('Backup loaded in this tab only. This browser is not saving data. Export a backup before you close the page.');
+      }
+
+      function askConfirm(message, confirmLabel) {
+        if (dialogOpen) return Promise.resolve(false);
+        dialogOpen = true;
+        const previouslyFocused = document.activeElement;
+        dialogMessage.textContent = message;
+        dialogConfirm.textContent = confirmLabel || 'Confirm';
+        dialog.hidden = false;
+        dialogConfirm.focus();
+        return new Promise((resolve) => {
+          function finish(value) {
+            if (!dialogOpen) return;
+            dialogOpen = false;
+            dialog.hidden = true;
+            dialogConfirm.removeEventListener('click', onYes);
+            dialogCancel.removeEventListener('click', onNo);
+            document.removeEventListener('keydown', onKey);
+            if (previouslyFocused && typeof previouslyFocused.focus === 'function') previouslyFocused.focus();
+            resolve(value);
+          }
+          function onYes() { finish(true); }
+          function onNo() { finish(false); }
+          function onKey(event) {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              finish(false);
+            }
+          }
+          dialogConfirm.addEventListener('click', onYes);
+          dialogCancel.addEventListener('click', onNo);
+          document.addEventListener('keydown', onKey);
+        });
+      }
+
+      // --- Events and init ---
+
+      function bindEvents() {
+        form.addEventListener('submit', submitExpense);
+        cancelButton.addEventListener('click', () => {
+          resetFormToAdd();
+          setStatus('Edit canceled.');
+        });
+        categorySelect.addEventListener('change', () => {
+          if (percentTouched) return;
+          percentInput.value = categorySelect.value ? formatPercent(defaultPercent(categorySelect.value)) : '';
+        });
+        percentInput.addEventListener('input', () => { percentTouched = true; });
+        yearSelect.addEventListener('change', () => {
+          filters.year = yearSelect.value;
+          renderResults();
+        });
+        categoryFilter.addEventListener('change', () => {
+          filters.category = categoryFilter.value;
+          renderResults();
+        });
+        fromInput.addEventListener('change', () => {
+          filters.from = fromInput.value;
+          renderResults();
+        });
+        toInput.addEventListener('change', () => {
+          filters.to = toInput.value;
+          renderResults();
+        });
+        searchInput.addEventListener('input', () => {
+          filters.q = searchInput.value;
+          renderResults();
+        });
+        mobileSort.addEventListener('change', () => {
+          const [key, dir] = mobileSort.value.split(':');
+          sortState.key = key;
+          sortState.dir = dir;
+          renderResults();
+        });
+        document.querySelector('thead').addEventListener('click', (event) => {
+          const button = event.target.closest('button[data-sort]');
+          if (!button) return;
+          const key = button.dataset.sort;
+          if (sortState.key === key) sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+          else {
+            sortState.key = key;
+            sortState.dir = key === 'description' || key === 'category' ? 'asc' : 'desc';
+          }
+          renderResults();
+        });
+        tableBody.addEventListener('click', (event) => {
+          const button = event.target.closest('button[data-action]');
+          if (!button) return;
+          if (button.dataset.action === 'view-image') {
+            openViewer(button.dataset.imageId);
+            return;
+          }
+          const exp = store.expenses.find((item) => item.id === button.dataset.id);
+          if (!exp) return;
+          if (button.dataset.action === 'edit') startEdit(exp);
+          if (button.dataset.action === 'delete') deleteExpense(exp);
+        });
+        receiptImages.addEventListener('change', () => addImageFiles(receiptImages.files));
+        imagePreview.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-remove-image]');
+          if (button) removePending(button.dataset.removeImage);
+        });
+        $('viewer-close').addEventListener('click', closeViewer);
+        viewer.addEventListener('click', (event) => {
+          if (event.target === viewer) closeViewer();
+        });
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape' && !viewer.hidden && !dialogOpen) closeViewer();
+        });
+        presetList.addEventListener('click', (event) => {
+          const apply = event.target.closest('[data-apply-preset]');
+          if (apply) {
+            const preset = store.presets.find((item) => item.id === apply.dataset.applyPreset);
+            if (preset) applyPreset(preset);
+            return;
+          }
+          const remove = event.target.closest('[data-remove-preset]');
+          if (!remove) return;
+          const preset = store.presets.find((item) => item.id === remove.dataset.removePreset);
+          if (preset) removePreset(preset);
+        });
+        savePresetOpen.addEventListener('click', () => {
+          savePresetPanel.hidden = false;
+          presetError.textContent = '';
+          presetLabelInput.focus();
+        });
+        $('save-preset-cancel').addEventListener('click', () => {
+          savePresetPanel.hidden = true;
+          presetError.textContent = '';
+        });
+        $('save-preset-confirm').addEventListener('click', savePresetFromForm);
+        defaultsList.addEventListener('change', (event) => {
+          const input = event.target.closest('[data-default-for]');
+          if (!input) return;
+          const name = input.dataset.defaultFor;
+          const parsed = parsePercent(input.value);
+          if (parsed.error) {
+            defaultsError.textContent = parsed.error;
+            input.value = formatPercent(defaultPercent(name));
+            return;
+          }
+          defaultsError.textContent = '';
+          store.categoryDefaults[name] = parsed.value;
+          input.value = formatPercent(parsed.value);
+          saveStore();
+          if (categorySelect.value === name && !percentTouched && !editingId) {
+            percentInput.value = formatPercent(parsed.value);
+          }
+        });
+        defaultsList.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-remove-category]');
+          if (button) removeCustom(button.dataset.removeCategory);
+        });
+        addCategoryForm.addEventListener('submit', (event) => {
+          event.preventDefault();
+          newCategoryError.textContent = '';
+          const name = newCategoryInput.value.trim();
+          if (!name) {
+            newCategoryError.textContent = 'Enter a category name.';
+            newCategoryInput.focus();
+            return;
+          }
+          if (name.length > 40) {
+            newCategoryError.textContent = 'Keep the category name to 40 characters.';
+            return;
+          }
+          if (allCategoryNames().some((category) => category.toLowerCase() === name.toLowerCase())) {
+            newCategoryError.textContent = 'That category already exists.';
+            return;
+          }
+          const percent = parsePercent(newCategoryPercent.value);
+          if (percent.error) {
+            newCategoryError.textContent = percent.error;
+            return;
+          }
+          store.customCategories.push(name);
+          store.categoryDefaults[name] = percent.value;
+          saveStore();
+          newCategoryInput.value = '';
+          newCategoryPercent.value = '100';
+          renderCategorySelects();
+          renderDefaults();
+          setStatus('Category added.');
+        });
+        $('export-csv').addEventListener('click', exportCsv);
+        $('export-json').addEventListener('click', exportJson);
+        $('import-button').addEventListener('click', () => $('import-file').click());
+        $('import-file').addEventListener('change', async (event) => {
+          const file = event.target.files && event.target.files[0];
+          event.target.value = '';
+          if (file) await importBackup(file);
+        });
+        $('print-button').addEventListener('click', () => window.print());
+        window.addEventListener('beforeprint', updatePrintStamp);
+      }
+
+      loadStore();
+      bindEvents();
+      loadImages().finally(() => {
+        renderAll();
+        resetFormToAdd();
+      });
+    })();
+  </script>
+  <noscript>This tracker needs JavaScript. When it runs, your expenses stay in this browser.</noscript>
+</body>
+</html>
